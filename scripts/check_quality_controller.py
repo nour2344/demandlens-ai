@@ -97,3 +97,22 @@ print(json.dumps(
     run_quality_controller([invalid_citation]),
     indent=4
 ))
+
+
+print("\n===== CASE 5: VALID ESTIMATE WITHOUT PAPER CITATIONS =====")
+
+valid_estimate = deepcopy(valid_result)
+
+valid_estimate["analysis"] = (
+    "Recorded sales were 1.2 on a normalized scale. "
+    "Estimated lost demand was 0.2667 and estimated "
+    "total demand was 1.4667. "
+    "The estimation method uses comparable historical "
+    "hourly averages with three observations per hour. "
+    "These estimates do not represent measured true demand."
+)
+
+print(json.dumps(
+    run_quality_controller([valid_estimate]),
+    indent=4
+))

@@ -116,6 +116,7 @@ def estimate_hidden_demand(df, store_id, product_id, date):
         for item in hourly_estimates
     )
 
+    
     return {
         "status": "success",
         "store_id": store_id,
@@ -128,5 +129,23 @@ def estimate_hidden_demand(df, store_id, product_id, date):
         ),
         "hourly_estimates": hourly_estimates,
         "method": "Comparable historical hourly average",
-        "unit": "Normalized sales"
+        "unit": "Normalized sales",
+        "estimation_scope": {
+            "start_hour_inclusive": 6,
+            "end_hour_exclusive": 22,
+            "included_stockout_hours": stockout_hours,
+            "excluded_stockout_hours": [
+                hour
+                for hour in investigation["stockout_hours"]
+                if hour not in stockout_hours
+            ],
+            "minimum_comparable_observations": MIN_COMPARABLE_DAYS
+        },
+        "limitations": [
+            "Only daytime stockout hours are estimated.",
+            "Zero expected sales is a valid historical estimate.",
+            "Adjusted demand does not include potential losses outside the estimation window.",
+            "Estimated demand is not measured true demand."
+        ]
     }
+

@@ -22,6 +22,11 @@ RULES:
   customer behavior or financial impact.
 - Zero estimated lost demand does not prove
   that no actual demand was lost.
+- Respect the estimation_scope field when provided.
+- Excluded stockout hours are intentional.
+- Zero expected sales is a valid historical estimate.
+- Adjusted total demand includes only estimated
+  losses within the defined estimation scope.
 
 RESPONSE FORMAT:
 
