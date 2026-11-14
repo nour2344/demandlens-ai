@@ -162,7 +162,8 @@ def run_quality_controller(agent_results):
         try:
 
             llm = get_llm().bind(
-                response_format=REVIEW_SCHEMA
+                response_format=REVIEW_SCHEMA,
+                max_tokens=2048
             )
 
             prompt = SYSTEM_PROMPT
@@ -224,6 +225,12 @@ def run_quality_controller(agent_results):
 
         except Exception as error:
             last_error = type(error).__name__
+
+            print(
+                f"[Quality Controller] "
+                f"Attempt {attempt + 1} failed: "
+                f"{last_error}"
+            )
 
     return {
         "agent": "quality_controller",
