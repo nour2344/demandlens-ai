@@ -5,3 +5,6 @@ pyarrow
 matplotlib
 python-dotenv
 pytest
+chromadb
+pypdf
+langchain-text-splitters
