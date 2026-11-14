@@ -148,6 +148,40 @@ def run_quality_controller(agent_results):
             "validation_type": "deterministic"
         }
 
+    # Preserve validated deterministic abstentions
+    review_results = []
+
+    for result in agent_results:
+
+        if (
+            result.get("agent") == "demand_estimator"
+            and result.get("status") == "insufficient_evidence"
+            and result.get("data", {}).get("status")
+                == "insufficient_evidence"
+            and result.get("data", {}).get(
+                "estimated_lost_demand"
+            ) is None
+            and result.get("analysis")
+                == result.get("data", {}).get("message")
+        ):
+            continue
+
+        review_results.append(result)
+
+    if agent_results and not review_results:
+        return {
+            "agent": "quality_controller",
+            "status": "approved",
+            "approved": True,
+            "issues": [],
+            "recommendation": (
+                "Valid deterministic abstention due to "
+                "insufficient historical evidence."
+            ),
+            "validation_type": "deterministic"
+        }
+
+
     usage = {
         "input_tokens": 0,
         "output_tokens": 0,
@@ -175,10 +209,10 @@ def run_quality_controller(agent_results):
                     "\nKeep the response concise."
                 )
 
-            response = llm.invoke([
-                ("system", prompt),
-                ("human", json.dumps(agent_results, indent=2))
-            ])
+                response = llm.invoke([
+                    ("system", prompt),
+                    ("human", json.dumps(review_results, indent=2))
+                ])
 
             for key in usage:
                 usage[key] += (
