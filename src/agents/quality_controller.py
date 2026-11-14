@@ -209,10 +209,10 @@ def run_quality_controller(agent_results):
                     "\nKeep the response concise."
                 )
 
-                response = llm.invoke([
-                    ("system", prompt),
-                    ("human", json.dumps(review_results, indent=2))
-                ])
+            response = llm.invoke([
+                ("system", prompt),
+                ("human", json.dumps(review_results, indent=2))
+            ])
 
             for key in usage:
                 usage[key] += (
