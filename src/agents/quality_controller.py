@@ -23,6 +23,10 @@ Check for:
 - Incorrect interpretation of historical evidence.
 - Scientific claims not supported by cited passages.
 - Failure to communicate uncertainty.
+- Confusion between observable sales and underlying demand.
+- Incorrect interpretation of zero sales as zero demand.
+- Presentation of reconstructed demand as a direct
+  measurement rather than an estimate.
 
 Reject the analysis if any material issue is detected.
 

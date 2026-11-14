@@ -54,8 +54,9 @@ def validate_demand_result(data):
     return issues
 
 
+
 def validate_citations(analysis, sources):
-    """Check whether cited identifiers actually exist."""
+    """Validate individual and grouped citations."""
 
     issues = []
 
@@ -64,9 +65,16 @@ def validate_citations(analysis, sources):
         for source in sources
     }
 
-    cited_ids = set(
-        re.findall(r"\[(S\d+)\]", analysis)
+    citation_groups = re.findall(
+        r"\[(S\d+(?:\s*,\s*S\d+)*)\]",
+        analysis
     )
+
+    cited_ids = {
+        citation
+        for group in citation_groups
+        for citation in re.findall(r"S\d+", group)
+    }
 
     if sources and not cited_ids:
         issues.append("No source citations found.")

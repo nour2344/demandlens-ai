@@ -20,6 +20,11 @@ STRICT RULES:
 - If evidence is insufficient, explicitly say so.
 - Distinguish research findings from recommendations.
 - Do not introduce external knowledge.
+- Stockouts suppress observable sales, not
+  necessarily underlying customer demand.
+- Zero sales do not establish zero customer demand.
+- Reconstructed demand is an estimate, not a
+  direct measurement of true demand.
 
 Use a maximum of 150 words.
 """
