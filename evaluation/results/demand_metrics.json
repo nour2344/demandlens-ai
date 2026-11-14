@@ -1,0 +1,20 @@
+{
+    "evaluation_cases": 100,
+    "successful_estimations": 63,
+    "abstentions": 37,
+    "coverage_percentage": 63.0,
+    "random_seed": 42,
+    "mask_duration_hours": 3,
+    "demand_estimator": {
+        "mae": 0.12673492063492064,
+        "rmse": 0.2172188016212634,
+        "wape": 81.97433264887064,
+        "bias": 0.04856349206349205
+    },
+    "zero_demand_baseline": {
+        "mae": 0.1546031746031746,
+        "rmse": 0.2550941313966589,
+        "wape": 100.0,
+        "bias": -0.1546031746031746
+    }
+}
