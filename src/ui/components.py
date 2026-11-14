@@ -1,439 +1,189 @@
-
 import json
+import re
 from pathlib import Path
-
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-
-ROOT_DIR = Path(__file__).resolve().parents[2]
-RESULTS_DIR = ROOT_DIR / "evaluation" / "results"
-
-
-AGENT_NAMES = {
-    "router": "Intelligent Router",
-    "data_analyst": "Data Analyst",
-    "demand_estimator": "Demand Estimator",
-    "knowledge_agent": "Knowledge Agent",
-    "quality_controller": "Quality Controller",
-    "final_response": "Final Response",
-    "clarification": "Clarification"
-}
+ROOT = Path(__file__).resolve().parents[2]
+GREEN, AMBER, GRAY = '#315C52', '#C37C36', '#AAB7B1'
+NAMES = {'router':'Router','data_analyst':'Data analyst','demand_estimator':'Demand estimator', 'knowledge_agent':'Knowledge agent','quality_controller':'Quality controller','final_response':'Response','clarification':'Clarification'}
+KEYS = {'data_analyst':'data_result','demand_estimator':'demand_result','knowledge_agent':'knowledge_result','quality_controller':'quality_result','router':'router_result'}
 
 
-def render_metrics(result):
-
-    data = result.get("data_result", {}).get("data", {})
-    demand = result.get("demand_result", {}).get("data", {})
-
-    recorded = data.get("recorded_sales")
-    lost = demand.get("estimated_lost_demand")
-    total = demand.get("estimated_total_demand")
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    col1.metric(
-        "Recorded sales",
-        f"{recorded:.4f}" if recorded is not None else "N/A"
-    )
-
-    col2.metric(
-        "Estimated lost demand",
-        f"{lost:.4f}" if lost is not None else "N/A"
-    )
-
-    col3.metric(
-        "Adjusted demand",
-        f"{total:.4f}" if total is not None else "N/A"
-    )
-
-    col4.metric(
-        "Stockout hours",
-        data.get("total_stockout_hours", "N/A")
-    )
-
-    st.caption(
-        "Sales values are normalized. Adjusted demand "
-        "includes estimated losses within the daytime scope only."
-    )
+def number(value):
+    return f'{value:.4f}' if isinstance(value, (int,float)) else '—'
 
 
-def render_stockout_chart(result):
+def chart(fig, height=230):
+    fig.update_layout(template='plotly_white', height=height, margin=dict(l=8,r=8,t=12,b=12), font=dict(size=12,color='#66776E'), paper_bgcolor='white', plot_bgcolor='white', legend=dict(orientation='h',y=1.13,x=0), hoverlabel=dict(bgcolor='white'))
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar':False})
 
-    data = result.get("data_result", {}).get("data", {})
 
-    if data.get("status") != "success":
+def trace(result):
+    nodes = result.get('execution_trace', [])
+    if not nodes:
+        st.caption('No execution trace.')
         return
-
-    stockout_hours = data.get("stockout_hours", [])
-
-    colors = [
-        "#DC2626" if hour in stockout_hours
-        else "#0D9488"
-        for hour in range(24)
-    ]
-
-    labels = [
-        "Stockout" if hour in stockout_hours
-        else "Available"
-        for hour in range(24)
-    ]
-
-    fig = go.Figure(go.Bar(
-        x=[f"{hour:02d}:00" for hour in range(24)],
-        y=[1] * 24,
-        marker_color=colors,
-        text=labels,
-        hovertemplate="%{x}: %{text}<extra></extra>"
-    ))
-
-    fig.update_layout(
-        title="24-hour stock availability",
-        template="plotly_white",
-        height=220,
-        showlegend=False,
-        bargap=0.12,
-        yaxis=dict(visible=False),
-        margin=dict(l=10, r=10, t=55, b=15)
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-    st.caption("Teal: available | Red: stockout")
+    for i,node in enumerate(nodes,1):
+        item = result.get(KEYS.get(node,''), {})
+        status = item.get('status', 'Completed')
+        with st.container(border=True):
+            a,b = st.columns([1,6])
+            a.caption(f'{i:02d}')
+            b.markdown(f'**{NAMES.get(node,node)}**')
+            b.caption(str(status).replace('_',' ').capitalize())
+    router = result.get('router_result')
+    if router:
+        with st.expander('Routing details'):
+            st.json(router)
 
 
-def render_demand_chart(result):
-
-    demand = result.get("demand_result", {}).get("data", {})
-
-    if demand.get("status") == "insufficient_evidence":
-
-        st.warning(
-            "Demand estimation unavailable: insufficient "
-            "comparable historical observations."
-        )
-
-        st.write(
-            "Unsupported hours:",
-            demand.get("unsupported_hours", [])
-        )
-
+def quality(result):
+    q = result.get('quality_result',{})
+    if not q:
+        st.info('No quality review was required.')
         return
-
-    if demand.get("status") != "success":
-        return
-
-    estimates = demand.get("hourly_estimates", [])
-
-    if not estimates:
-        return
-
-    df = pd.DataFrame(estimates)
-
-    df["hour_label"] = df["hour"].apply(
-        lambda hour: f"{hour:02d}:00"
-    )
-
-    fig = go.Figure()
-
-    fig.add_trace(go.Bar(
-        x=df["hour_label"],
-        y=df["actual_sales"],
-        name="Observed sales",
-        marker_color="#94A3B8"
-    ))
-
-    fig.add_trace(go.Bar(
-        x=df["hour_label"],
-        y=df["expected_sales"],
-        name="Expected sales",
-        marker_color="#0D9488"
-    ))
-
-    fig.update_layout(
-        title="Hourly demand reconstruction",
-        template="plotly_white",
-        barmode="group",
-        height=370,
-        xaxis_title="Stockout hour",
-        yaxis_title="Normalized sales",
-        legend=dict(orientation="h"),
-        margin=dict(l=20, r=20, t=60, b=20)
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.dataframe(
-        df.drop(columns=["hour_label"]),
-        use_container_width=True,
-        hide_index=True
-    )
-
-    st.caption(
-        "Expected sales are statistical estimates, "
-        "not measurements of true customer demand."
-    )
-
-
-def render_execution_trace(result):
-
-    trace = result.get("execution_trace", [])
-
-    if not trace:
-        return
-
-    agent_keys = {
-        "data_analyst": "data_result",
-        "demand_estimator": "demand_result",
-        "knowledge_agent": "knowledge_result",
-        "quality_controller": "quality_result"
-    }
-
-    st.subheader("Execution trace")
-
-    for index, node in enumerate(trace, start=1):
-
-        name = AGENT_NAMES.get(node, node)
-        key = agent_keys.get(node)
-
-        status = (
-            result.get(key, {}).get("status", "executed")
-            if key else "executed"
-        )
-
-        st.markdown(f"**{index:02d} — {name}**")
-        st.caption(f"Status: {status}")
-
-        if index < len(trace):
-            st.markdown("↓")
-
-    if result.get("router_result"):
-        with st.expander("Routing decision"):
-            st.json(result["router_result"])
-
-
-def render_quality_control(result):
-
-    quality = result.get("quality_result", {})
-
-    if not quality:
-        st.info("Quality review was not required.")
-        return
-
-    if quality.get("approved") is True:
-        st.success("Quality review passed.")
+    if q.get('approved') is True:
+        st.success('Review passed')
     else:
-        st.error("Analysis not approved by Quality Controller.")
-
-    st.write("Verification type:",
-             quality.get("validation_type", "N/A"))
-
-    st.write("Attempts:", quality.get("attempts", "N/A"))
-
-    for issue in quality.get("issues", []):
-        st.warning(issue)
-
-    if quality.get("recommendation"):
-        st.write(quality["recommendation"])
-
-    st.caption(
-        "Quality approval reduces risk but does not "
-        "guarantee factual correctness."
-    )
+        st.error('Review did not approve the output')
+    st.caption(f"{q.get('validation_type','Verification')} · Attempts: {q.get('attempts','—')}")
+    for issue in q.get('issues',[]):
+        st.write('• '+issue)
+    if q.get('recommendation'):
+        st.write(q['recommendation'])
+    st.caption('Review is not a guarantee of factual accuracy.')
 
 
-def render_sources(result):
-
-    if result.get("quality_result", {}).get("approved") is not True:
-        st.info("Scientific output was not approved.")
+def evidence(result):
+    if result.get('quality_result',{}).get('approved') is not True:
+        st.info('Unapproved scientific output is withheld.')
         return
-
-    sources = result.get("knowledge_result", {}).get("sources", [])
-
+    knowledge = result.get('knowledge_result',{})
+    sources = knowledge.get('sources',[])
     if not sources:
-        st.info("No scientific passages retrieved.")
+        st.info('No scientific passages retrieved for this run.')
         return
-
-    for source in sources:
-
-        label = (
-            f"[{source['citation_id']}] "
-            f"{source['source']} — Page {source['page']}"
-        )
-
-        with st.expander(label):
-
-            st.write(source["text"])
-
-            st.caption(
-                f"Cosine distance: {source['distance']}"
-            )
+    st.markdown(knowledge.get('analysis',''))
+    st.caption('Retrieved passages')
+    for s in sources:
+        with st.expander(f"[{s['citation_id']}] {s['source']} · p. {s['page']}"):
+            st.write(s['text'])
+            st.caption(f"Cosine distance: {s['distance']} (not a confidence score)")
 
 
-def load_report(filename):
+def overview(result):
+    if 'clarification' in result.get('execution_trace',[]):
+        st.info(result.get('final_answer','Please clarify the request.'))
+        return
+    if result.get('quality_result',{}).get('approved') is not True:
+        st.warning('Analysis withheld pending a successful quality review.')
+        for issue in result.get('quality_result',{}).get('issues',[]):
+            st.write(issue)
+        return
+    data = result.get('data_result',{}).get('data',{})
+    demand = result.get('demand_result',{}).get('data',{})
+    if data.get('status') != 'success':
+        st.markdown(result.get('final_answer',''))
+        return
+    recorded = data.get('recorded_sales')
+    lost = demand.get('estimated_lost_demand')
+    total = demand.get('estimated_total_demand')
+    for col,label,value,caption in zip(st.columns(4),['Recorded sales','Est. lost demand','Adjusted demand','Stockout hours'],[number(recorded),number(lost),number(total),str(data.get('total_stockout_hours','—'))],['Observed · normalized','Daytime estimate','Observed + estimated loss','Across 24 hours']):
+        with col:
+            with st.container(border=True):
+                st.metric(label,value)
+                st.caption(caption)
+    if demand.get('status') == 'insufficient_evidence':
+        st.warning('No estimate: insufficient comparable observations. Unsupported hours: '+', '.join(map(str,demand.get('unsupported_hours',[]))))
+    elif not demand and result.get('route') in ('estimate','hybrid') and data.get('daytime_stockout_hours')==0:
+        st.info('No daytime stockout detected; estimation not required within the modeled window.')
+    hours = data.get('stockout_hours',[])
+    main,side = st.columns([2,1],gap='medium')
+    with main:
+        with st.container(border=True):
+            st.markdown('**Stock availability**')
+            st.caption('24-hour observation window')
+            fig = go.Figure(go.Bar(x=list(range(24)),y=[1]*24,marker_color=[AMBER if h in hours else GREEN for h in range(24)], customdata=['Stockout' if h in hours else 'Available' for h in range(24)],hovertemplate='%{x}:00 · %{customdata}<extra></extra>'))
+            fig.update_yaxes(visible=False)
+            fig.update_xaxes(tickmode='array',tickvals=[0,4,8,12,16,20,23],ticktext=['00:00','04:00','08:00','12:00','16:00','20:00','23:00'],showgrid=False)
+            fig.update_layout(bargap=.12)
+            chart(fig,145)
+            st.caption('Green · available     /     Amber · stockout')
+            estimates = demand.get('hourly_estimates',[]) if demand.get('status')=='success' else []
+            if estimates:
+                st.divider()
+                st.markdown('**Hourly demand reconstruction**')
+                frame=pd.DataFrame(estimates)
+                x=[f'{h:02d}:00' for h in frame.hour]
+                fig=go.Figure([go.Bar(x=x,y=frame.actual_sales,name='Observed',marker_color=GRAY),go.Bar(x=x,y=frame.expected_sales,name='Expected',marker_color=GREEN)])
+                fig.update_layout(barmode='group')
+                fig.update_yaxes(title='Normalized sales',gridcolor='#edf0ee',rangemode='tozero')
+                chart(fig,260)
+                with st.expander('Hourly evidence table'):
+                    st.dataframe(frame,hide_index=True,use_container_width=True)
+    with side:
+        with st.container(border=True):
+            st.markdown('**Demand composition**')
+            if isinstance(total,(int,float)) and total>0 and isinstance(lost,(int,float)) and isinstance(recorded,(int,float)):
+                fig=go.Figure(go.Pie(labels=['Recorded','Estimated loss'],values=[recorded,lost],hole=.72,marker_colors=[GREEN,AMBER],textinfo='none',sort=False))
+                fig.update_layout(annotations=[dict(text=f'{lost/total:.1%}',x=.5,y=.5,showarrow=False,font=dict(size=23,color='#182622'))],showlegend=False)
+                chart(fig,180)
+                st.caption('Estimated loss / adjusted demand')
+            else:
+                st.caption('No approved numerical estimate for this run.')
+            st.divider()
+            st.markdown('**Estimation scope**')
+            st.write('06:00–22:00 (end exclusive)')
+            st.caption('Potential losses outside this window are excluded. Values are normalized, not currency or item counts.')
+    st.subheader('Analytical findings')
+    for key in ('data_result','demand_result','knowledge_result'):
+        item=result.get(key,{})
+        if item:
+            with st.expander(NAMES.get(item.get('agent'),key),expanded=key=='demand_result'):
+                st.markdown(item.get('analysis',''))
+    st.download_button('Download investigation report',result.get('final_answer',''),'demandlens-report.md',mime='text/markdown')
 
-    path = RESULTS_DIR / filename
 
-    if not path.exists():
+def report(name):
+    p=ROOT/'evaluation'/'results'/name
+    try:
+        return json.loads(p.read_text(encoding='utf-8'))
+    except (OSError,ValueError):
         return {}
 
-    with open(path, encoding="utf-8") as file:
-        return json.load(file)
 
-
-def render_evaluation():
-
-    st.header("System evaluation")
-
-    demand = load_report("demand_metrics.json")
-    workflow = load_report("workflow_evaluation.json")
-    context = load_report("context_evaluation.json")
-
-    if demand:
-
-        st.subheader("Demand reconstruction experiment")
-
-        model = demand.get("demand_estimator", {})
-        baseline = demand.get("zero_demand_baseline", {})
-
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric(
-            "Evaluation cases",
-            demand["evaluation_cases"]
-        )
-
-        col2.metric(
-            "Estimation coverage",
-            f"{demand['coverage_percentage']:.1f}%"
-        )
-
-        if model and baseline and baseline["mae"] > 0:
-
-            improvement = (
-                1 - model["mae"] / baseline["mae"]
-            ) * 100
-
-            col3.metric(
-                "MAE improvement",
-                f"{improvement:.2f}%"
-            )
-
-            metrics = pd.DataFrame({
-                "DemandLens AI": model,
-                "Zero-demand baseline": baseline
-            })
-
-            st.dataframe(metrics, use_container_width=True)
-
-            fig = go.Figure()
-
-            for name, values, color in [
-                ("DemandLens AI", model, "#0D9488"),
-                ("Baseline", baseline, "#94A3B8")
-            ]:
-
-                fig.add_trace(go.Bar(
-                    x=["MAE", "RMSE"],
-                    y=[values["mae"], values["rmse"]],
-                    name=name,
-                    marker_color=color
-                ))
-
-            fig.update_layout(
-                barmode="group",
-                template="plotly_white",
-                height=320,
-                title="Estimation error comparison"
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-        st.caption(
-            "Synthetic stockout experiment. Accuracy metrics "
-            "apply to successfully estimated cases."
-        )
-
-    if workflow:
-
-        st.divider()
-        st.subheader("Multi-agent workflow evaluation")
-
-        summary = workflow["summary"]
-
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric(
-            "Routing accuracy",
-            f"{summary['routing_accuracy']:.1%}"
-        )
-
-        col2.metric(
-            "End-to-end pass rate",
-            f"{summary['overall_pass_rate']:.1%}"
-        )
-
-        col3.metric(
-            "Average latency",
-            f"{summary['average_latency_seconds']:.2f}s"
-        )
-
-        df = pd.DataFrame(workflow["results"])
-
-        columns = [
-            "case", "actual_route",
-            "actual_outcome", "passed",
-            "tokens", "latency_seconds"
-        ]
-
-        st.dataframe(
-            df[columns],
-            use_container_width=True,
-            hide_index=True
-        )
-
-        st.caption(
-            "Results from predefined evaluation scenarios, "
-            "not general production accuracy."
-        )
-
-    if context:
-
-        st.divider()
-        st.subheader("RAG context experiment")
-
-        df = pd.DataFrame(context["configurations"])
-
-        columns = [
-            "top_k", "context_characters",
-            "total_tokens", "latency_seconds",
-            "quality_approved"
-        ]
-
-        st.dataframe(
-            df[columns],
-            use_container_width=True,
-            hide_index=True
-        )
-
-        fig = go.Figure(go.Bar(
-            x=[f"k={k}" for k in df["top_k"]],
-            y=df["total_tokens"],
-            marker_color=["#0D9488", "#64748B"]
-        ))
-
-        fig.update_layout(
-            title="Generation token consumption",
-            template="plotly_white",
-            height=300
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        st.caption(
-            "One execution per context configuration. "
-            "Verification tokens are recorded separately."
-        )
-
-    if not any([demand, workflow, context]):
-        st.info("No saved evaluation reports found.")
+def evaluation():
+    st.title('System evaluation')
+    st.caption('Saved benchmarks · no API calls')
+    d=report('demand_metrics.json'); w=report('workflow_evaluation.json'); c=report('context_evaluation.json')
+    a,b,c_tab=st.tabs(['Demand reconstruction','Workflow reliability','Context experiment'])
+    with a:
+        if d:
+            m=d.get('demand_estimator',{}); base=d.get('zero_demand_baseline',{})
+            cols=st.columns(3)
+            cols[0].metric('Synthetic cases',d['evaluation_cases']); cols[1].metric('Coverage',f"{d['coverage_percentage']:.0f}%")
+            if base.get('mae',0)>0:
+                cols[2].metric('MAE reduction',f"{1-m['mae']/base['mae']:.1%}")
+                with st.container(border=True):
+                    fig=go.Figure([go.Bar(name='Estimator',x=['MAE','RMSE'],y=[m['mae'],m['rmse']],marker_color=GREEN),go.Bar(name='Zero baseline',x=['MAE','RMSE'],y=[base['mae'],base['rmse']],marker_color=GRAY)])
+                    fig.update_layout(barmode='group'); chart(fig,300)
+                    st.dataframe(pd.DataFrame({'Estimator':m,'Baseline':base}),use_container_width=True)
+            st.caption('Synthetic masking; accuracy is conditional on successful estimations.')
+        else: st.info('Demand report not found.')
+    with b:
+        if w:
+            s=w['summary']; cols=st.columns(3)
+            cols[0].metric('Routing accuracy',f"{s['routing_accuracy']:.0%}"); cols[1].metric('Passed',f"{s['passed_cases']}/{s['total_cases']}"); cols[2].metric('Mean latency',f"{s['average_latency_seconds']:.2f}s")
+            cols_show=['case','actual_route','actual_outcome','passed','tokens','latency_seconds']
+            st.dataframe(pd.DataFrame(w['results'])[cols_show],hide_index=True,use_container_width=True)
+            st.caption('Predefined scenarios; pass rate is not general production accuracy.')
+        else: st.info('Workflow report not found.')
+    with c_tab:
+        if c:
+            f=pd.DataFrame(c['configurations']); st.dataframe(f[['top_k','context_characters','total_tokens','verification_tokens','latency_seconds','quality_approved']],hide_index=True,use_container_width=True)
+            with st.container(border=True):
+                fig=go.Figure(go.Bar(x=[f'k={k}' for k in f.top_k],y=f.total_tokens,marker_color=[GREEN,GRAY])); chart(fig,260)
+            st.caption('One run per configuration. Generation tokens exclude verification.')
+        else: st.info('Context report not found.')

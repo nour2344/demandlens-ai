@@ -1,297 +1,86 @@
-
 from datetime import date
 from time import perf_counter
-
 import streamlit as st
-
 from src.workflows.static_workflow import build_static_workflow
 from src.workflows.dynamic_workflow import build_dynamic_workflow
+from src.ui.styles import apply_styles
+from src.ui.components import overview, trace, quality, evidence, evaluation
 
-from src.ui.styles import apply_styles, render_header
-
-from src.ui.components import (
-    render_metrics,
-    render_stockout_chart,
-    render_demand_chart,
-    render_execution_trace,
-    render_quality_control,
-    render_sources,
-    render_evaluation
-)
-
-
-st.set_page_config(
-    page_title="DemandLens AI",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
+st.set_page_config(page_title='DemandLens | Retail intelligence',page_icon=':material/query_stats:',layout='wide')
 apply_styles()
-
-
-DEMO_CASES = {
-    "Full investigation": {
-        "question": (
-            "Estimate lost demand for this product "
-            "and explain the scientific forecasting implications."
-        ),
-        "store_id": 1,
-        "product_id": 793
-    },
-    "Stockout investigation": {
-        "question": "Did this product experience a stockout?",
-        "store_id": 1,
-        "product_id": 793
-    },
-    "Demand estimation": {
-        "question": "Estimate hidden demand for this product.",
-        "store_id": 1,
-        "product_id": 793
-    },
-    "Scientific question": {
-        "question": "What is censored demand in retail?",
-        "store_id": 1,
-        "product_id": 793
-    },
-    "Insufficient evidence": {
-        "question": "Estimate lost demand for this product.",
-        "store_id": 0,
-        "product_id": 72
-    },
-    "Missing information": {
-        "question": "Estimate lost demand for my product.",
-        "store_id": 1,
-        "product_id": 793
-    }
+CASES={
+    'Full investigation': ('Estimate lost demand for this product and explain the scientific forecasting implications.',1,793,True),
+    'Stock availability': ('Did this product experience a stockout?',1,793,True),
+    'Demand estimation': ('Estimate hidden demand for this product.',1,793,True),
+    'Research question': ('What is censored demand in retail?',1,793,False),
+    'Insufficient evidence': ('Estimate lost demand for this product.',0,72,True),
+    'Missing information': ('Estimate lost demand for my product.',1,793,False),
 }
-
-
 with st.sidebar:
-
-    st.title("DemandLens AI")
-    st.caption("Retail Intelligence Workspace")
-
-    page = st.radio(
-        "Navigation",
-        ["Investigation", "System evaluation"]
-    )
-
+    st.markdown('### DemandLens /')
+    st.caption('RETAIL INTELLIGENCE')
     st.divider()
-
-    if page == "Investigation":
-
-        workflow_mode = st.radio(
-            "Orchestration mode",
-            ["Dynamic", "Static"]
-        )
-
-        scenario = st.selectbox(
-            "Demo scenario",
-            list(DEMO_CASES.keys())
-        )
-
-        demo = DEMO_CASES[scenario]
-
-        include_identifiers = st.checkbox(
-            "Include retail identifiers",
-            value=scenario != "Missing information",
-            key=f"identifiers_{scenario}"
-        )
-
-        if workflow_mode == "Static":
-            include_identifiers = True
-
-        store_id = st.number_input(
-            "Store ID",
-            min_value=0,
-            value=demo["store_id"],
-            step=1,
-            key=f"store_{scenario}"
-        )
-
-        product_id = st.number_input(
-            "Product ID",
-            min_value=0,
-            value=demo["product_id"],
-            step=1,
-            key=f"product_{scenario}"
-        )
-
-        investigation_date = st.date_input(
-            "Investigation date",
-            value=date(2024, 6, 25),
-            min_value=date(2024, 3, 28),
-            max_value=date(2024, 6, 25)
-        )
-
-        top_k = st.slider(
-            "RAG retrieval depth",
-            min_value=1,
-            max_value=8,
-            value=3
-        )
-
+    page=st.radio('Workspace',['Investigate','System evaluation'],label_visibility='collapsed')
     st.divider()
+    st.caption('DATASET')
+    st.markdown('**FreshRetailNet-50K**')
+    st.caption('10,000-row research sample · Mar–Jun 2024')
+    st.divider()
+    st.caption('ENGINE')
+    st.write('GPT-OSS-20B / LangGraph')
+    st.caption('Research prototype · local workspace')
 
-    st.caption("TECHNOLOGY STACK")
-    st.markdown("""
-    - GPT-OSS-20B via Groq
-    - LangGraph
-    - ChromaDB
-    - Streamlit & Plotly
-    """)
-
-    st.caption("DemandLens AI · Research prototype")
-
-
-render_header()
-
-
-if page == "System evaluation":
-
-    render_evaluation()
-
+if page=='System evaluation':
+    evaluation()
 else:
-
-    st.subheader("Investigation workspace")
-
-    question = st.text_area(
-        "What would you like to investigate?",
-        value=demo["question"],
-        height=100,
-        key=f"question_{scenario}"
-    )
-
-    if st.button(
-        "Run investigation",
-        type="primary",
-        use_container_width=True
-    ):
-
+    st.markdown('<div class="dl-kicker">Workspace / Investigations</div>',unsafe_allow_html=True)
+    st.title('Demand investigation')
+    st.caption('Inspect stock availability, reconstruct censored sales and review the supporting evidence.')
+    scenario=st.selectbox('Investigation preset',list(CASES))
+    q,s,p,include=CASES[scenario]
+    with st.form('run_form',border=True):
+        a,b,c,d=st.columns([1,1,1.3,1.2])
+        store=a.number_input('Store ID',min_value=0,value=s,step=1,key=f'store_{scenario}')
+        product=b.number_input('Product ID',min_value=0,value=p,step=1,key=f'product_{scenario}')
+        day=c.date_input('Date',value=date(2024,6,25),min_value=date(2024,3,28),max_value=date(2024,6,25))
+        mode=d.selectbox('Workflow',['Dynamic','Static'])
+        question=st.text_area('Investigation question',value=q,height=88,key=f'q_{scenario}')
+        left,right,action=st.columns([1.3,1,1],vertical_alignment='bottom')
+        ids=left.checkbox('Include retail identifiers',value=include,key=f'ids_{scenario}')
+        k=right.selectbox('Retrieved passages',[1,2,3,4,5,6,7,8],index=2)
+        submitted=action.form_submit_button('Run investigation',type='primary',use_container_width=True)
+        st.caption('Static workflow always includes retail identifiers. Dynamic workflow can ask for clarification.')
+    if submitted:
         if not question.strip():
-
-            st.warning("Please enter an investigation question.")
-
+            st.warning('Enter an investigation question.')
         else:
-
-            initial_state = {
-                "question": question,
-                "top_k": top_k,
-                "execution_trace": [],
-                "retry_count": 0,
-                "retry_tokens": 0
-            }
-
-            if include_identifiers:
-
-                initial_state.update({
-                    "store_id": int(store_id),
-                    "product_id": int(product_id),
-                    "date": investigation_date.isoformat()
-                })
-
-            st.session_state.pop("investigation_result", None)
-
-            with st.spinner("AI agents are investigating..."):
-
-                start = perf_counter()
-
+            state=dict(question=question,top_k=k,execution_trace=[],retry_count=0,retry_tokens=0)
+            if ids or mode=='Static': state.update(store_id=int(store),product_id=int(product),date=day.isoformat())
+            st.session_state.pop('dl_run',None)
+            with st.spinner('Running investigation and quality review…'):
+                t=perf_counter()
                 try:
-
-                    if workflow_mode == "Static":
-                        workflow = build_static_workflow()
-                    else:
-                        workflow = build_dynamic_workflow()
-
-                    result = workflow.invoke(initial_state)
-
-                    st.session_state["investigation_result"] = {
-                        "result": result,
-                        "latency": round(
-                            perf_counter() - start, 3
-                        ),
-                        "mode": workflow_mode,
-                        "question": question
-                    }
-
-                except Exception as error:
-
-                    st.error(
-                        f"Investigation failed: "
-                        f"{type(error).__name__}"
-                    )
-
-    if "investigation_result" in st.session_state:
-
-        saved = st.session_state["investigation_result"]
-
-        result = saved["result"]
-        quality = result.get("quality_result", {})
-
+                    graph=build_static_workflow() if mode=='Static' else build_dynamic_workflow()
+                    result=graph.invoke(state)
+                    st.session_state.dl_run=dict(result=result,mode=mode,latency=perf_counter()-t,request=state)
+                except Exception as exc:
+                    st.error(f'Investigation failed: {type(exc).__name__}')
+    saved=st.session_state.get('dl_run')
+    if not saved:
+        with st.container(border=True):
+            st.subheader('Start an investigation')
+            st.write('Choose a preset or enter a retail question. Results, evidence and execution details will appear here after a run.')
+    else:
+        result=saved['result']; request=saved['request']; qc=result.get('quality_result',{})
         st.divider()
-
-        st.caption(
-            f"Last completed investigation · {saved['mode']}"
-        )
-
-        st.write(saved["question"])
-
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric(
-            "Workflow",
-            saved["mode"]
-        )
-
-        col2.metric(
-            "Reported tokens",
-            result.get("total_tokens", 0)
-        )
-
-        col3.metric(
-            "Execution time",
-            f"{saved['latency']:.2f}s"
-        )
-
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "Investigation results",
-            "Agent orchestration",
-            "Scientific evidence",
-            "Quality control"
-        ])
-
-        with tab1:
-
-            if quality.get("approved") is True:
-
-                if result.get("data_result"):
-                    render_metrics(result)
-                    render_stockout_chart(result)
-                    render_demand_chart(result)
-
-                st.subheader("Investigation report")
-                st.markdown(result.get("final_answer", ""))
-
-            elif "clarification" in result.get(
-                "execution_trace", []
-            ):
-
-                st.info(result.get("final_answer", ""))
-
-            else:
-
-                st.warning(
-                    "The investigation could not be approved."
-                )
-
-                st.markdown(result.get("final_answer", ""))
-
-        with tab2:
-            render_execution_trace(result)
-
-        with tab3:
-            render_sources(result)
-
-        with tab4:
-            render_quality_control(result)
+        st.subheader('Investigation results')
+        snapshot=' · '.join([saved['mode'], f"Store {request['store_id']} / Product {request['product_id']} / {request['date']}" if 'store_id' in request else 'No retail identifiers',f"k={request['top_k']}"])
+        st.caption('Last completed run · '+snapshot)
+        st.write(request['question'])
+        label='Approved' if qc.get('approved') is True else 'Clarification required' if 'clarification' in result.get('execution_trace',[]) else 'Not approved'
+        st.caption(f"{label}  /  {saved['latency']:.2f}s  /  {result.get('total_tokens',0):,} reported tokens")
+        tabs=st.tabs(['Overview','Scientific evidence','Agent execution','Quality review'])
+        with tabs[0]: overview(result)
+        with tabs[1]: evidence(result)
+        with tabs[2]: trace(result)
+        with tabs[3]: quality(result)
