@@ -8,3 +8,5 @@ pytest
 chromadb
 pypdf
 langchain-text-splitters
+langgraph
+langchain-groq
