@@ -1,0 +1,137 @@
+{
+    "question": "How do stockouts affect retail demand forecasting, and why is correcting censored demand important?",
+    "configurations": [
+        {
+            "top_k": 3,
+            "status": "success",
+            "retrieved_passages": 3,
+            "unique_documents": 2,
+            "unique_pages": 3,
+            "context_characters": 2457,
+            "input_tokens": 738,
+            "output_tokens": 297,
+            "total_tokens": 1035,
+            "latency_seconds": 2.648,
+            "quality_approved": true,
+            "quality_status": "approved",
+            "quality_issues": [],
+            "verification_tokens": 1983,
+            "citation_issues": [],
+            "answer": "Stockouts censor sales data: when a product runs out, the observed sales record under\u2011reports the true customer demand. This censoring violates the missing\u2011at\u2011random assumption that most forecasting methods rely on, because demand surges during promotions or perishability can cause non\u2011random stockouts and even permanent loss of demand when items expire [S2]. If models are trained on these censored sales, they systematically underestimate demand, leading to lower reorder quantities, more frequent stockouts, and a self\u2011reinforcing \u201cvicious cycle\u201d of demand underestimation [S3]. Correcting censored demand is therefore essential; it allows forecasts to reflect true customer demand rather than the artifact of supply constraints, enabling better inventory decisions that balance waste against service quality and breaking the cycle of under\u2011replenishment [S1].",
+            "sources": [
+                {
+                    "citation_id": "S1",
+                    "chunk_id": "FreshRetailNet-50K paper.pdf_p3_c1",
+                    "text": "resolution data facilitates groundbreaking research in censorship-aware demand modeling, offering\nnew opportunities for both academic studies and practical applications in the industry.\n2 Related Work\n2.1 Retail Forecasting Datasets\nExisting public datasets for retail demand forecasting exhibit critical gaps when applied to demand\nforecasting of perishable products, particularly in two dimensions:\nCensoring Indicators: Existing retail benchmarks (e.g., M5[13][22], Walmart[1], Favorita[10])\nlack mechanisms to distinguish true zero demand from unobserved demand during stockouts, as\nthey universally treat zero sales records as demand absence. This limitation is especially severe for\nperishable goods, where short shelf lives and frequent restocking requirements heighten stockout",
+                    "source": "FreshRetailNet-50K paper.pdf",
+                    "page": 3,
+                    "distance": 0.2388
+                },
+                {
+                    "citation_id": "S2",
+                    "chunk_id": "FreshRetailNet-50K paper.pdf_p4_c0",
+                    "text": "censorship. Stockouts create fundamentally different missing mechanisms where demand surges\nduring promotions generate non-random censorship patterns. Meanwhile, perishability leads to\npermanent demand loss when products expire, creating an irreversible data generation process\nthat violates the missing-at-random[31][17][16] assumption underlying most imputation and many\nforecasting methods. FreshRetailNet-50K addresses this limitation by providing large-scale naturally\ncensored retail data with annotated stockout events, enabling rigorous evaluation of both imputation\nand demand forecasting methods against realistic supply-demand interactions. This facilitates the\ndevelopment of specialized approaches that can account for retail specific censorship mechanisms,",
+                    "source": "FreshRetailNet-50K paper.pdf",
+                    "page": 4,
+                    "distance": 0.2505
+                },
+                {
+                    "citation_id": "S3",
+                    "chunk_id": "Censored Demand Forecasting paper.pdf_p2_c0",
+                    "text": "Inventions 2026, 11, 89 2 of 34\nfuture\u2014and inventory optimization\u2014translating those forecasts into ordering decisions\nthat balance waste against service quality.\nHowever, demand forecasting in perishable retail is complicated by a phenomenon\nlong recognized in operations research but only recently addressed at scale in the machine\nlearning literature: censored demand. When a product stocks out during a selling period,\nobserved sales understate true demand. If a retailer trains forecasting models on censored\nsales data, the resulting predictions systematically underestimate demand, leading to\nlower reorder quantities, more frequent stockouts, and a self-reinforcing \u201cvicious cycle\u201d of\ndemand underestimation [3,4].",
+                    "source": "Censored Demand Forecasting paper.pdf",
+                    "page": 2,
+                    "distance": 0.29
+                }
+            ]
+        },
+        {
+            "top_k": 8,
+            "status": "success",
+            "retrieved_passages": 8,
+            "unique_documents": 2,
+            "unique_pages": 7,
+            "context_characters": 6508,
+            "input_tokens": 1765,
+            "output_tokens": 326,
+            "total_tokens": 2091,
+            "latency_seconds": 1.344,
+            "quality_approved": false,
+            "quality_status": "rejected",
+            "quality_issues": [
+                "No source citations found."
+            ],
+            "verification_tokens": 0,
+            "citation_issues": [
+                "No source citations found."
+            ],
+            "answer": "Stockouts censor sales: the observed sale \\(y_t\\) is the minimum of true demand \\(d_t\\) and inventory \\(I_t\\) (S3). Because zero sales during a stockout are treated as zero demand, models learn a biased, lower\u2011bound signal. This systematic under\u2011estimation propagates through hierarchical forecasts, distorting aggregated patterns and reinforcing a \u201cvicious cycle\u201d of demand under\u2011estimation, lower reorder quantities, and more stockouts (S3, S5). Stockouts also create non\u2011random missingness\u2014promotions or perishability generate censoring that violates the missing\u2011at\u2011random assumption used by many imputation methods (S2). Correcting censored demand restores the true consumption signal, enabling accurate demand recovery and forecasting. Accurate estimates improve inventory and pricing decisions, reduce waste, and break the self\u2011reinforcing cycle of stockouts (S1, S4).",
+            "sources": [
+                {
+                    "citation_id": "S1",
+                    "chunk_id": "FreshRetailNet-50K paper.pdf_p3_c1",
+                    "text": "resolution data facilitates groundbreaking research in censorship-aware demand modeling, offering\nnew opportunities for both academic studies and practical applications in the industry.\n2 Related Work\n2.1 Retail Forecasting Datasets\nExisting public datasets for retail demand forecasting exhibit critical gaps when applied to demand\nforecasting of perishable products, particularly in two dimensions:\nCensoring Indicators: Existing retail benchmarks (e.g., M5[13][22], Walmart[1], Favorita[10])\nlack mechanisms to distinguish true zero demand from unobserved demand during stockouts, as\nthey universally treat zero sales records as demand absence. This limitation is especially severe for\nperishable goods, where short shelf lives and frequent restocking requirements heighten stockout",
+                    "source": "FreshRetailNet-50K paper.pdf",
+                    "page": 3,
+                    "distance": 0.2388
+                },
+                {
+                    "citation_id": "S2",
+                    "chunk_id": "FreshRetailNet-50K paper.pdf_p4_c0",
+                    "text": "censorship. Stockouts create fundamentally different missing mechanisms where demand surges\nduring promotions generate non-random censorship patterns. Meanwhile, perishability leads to\npermanent demand loss when products expire, creating an irreversible data generation process\nthat violates the missing-at-random[31][17][16] assumption underlying most imputation and many\nforecasting methods. FreshRetailNet-50K addresses this limitation by providing large-scale naturally\ncensored retail data with annotated stockout events, enabling rigorous evaluation of both imputation\nand demand forecasting methods against realistic supply-demand interactions. This facilitates the\ndevelopment of specialized approaches that can account for retail specific censorship mechanisms,",
+                    "source": "FreshRetailNet-50K paper.pdf",
+                    "page": 4,
+                    "distance": 0.2505
+                },
+                {
+                    "citation_id": "S3",
+                    "chunk_id": "Censored Demand Forecasting paper.pdf_p2_c0",
+                    "text": "Inventions 2026, 11, 89 2 of 34\nfuture\u2014and inventory optimization\u2014translating those forecasts into ordering decisions\nthat balance waste against service quality.\nHowever, demand forecasting in perishable retail is complicated by a phenomenon\nlong recognized in operations research but only recently addressed at scale in the machine\nlearning literature: censored demand. When a product stocks out during a selling period,\nobserved sales understate true demand. If a retailer trains forecasting models on censored\nsales data, the resulting predictions systematically underestimate demand, leading to\nlower reorder quantities, more frequent stockouts, and a self-reinforcing \u201cvicious cycle\u201d of\ndemand underestimation [3,4].",
+                    "source": "Censored Demand Forecasting paper.pdf",
+                    "page": 2,
+                    "distance": 0.29
+                },
+                {
+                    "citation_id": "S4",
+                    "chunk_id": "FreshRetailNet-50K paper.pdf_p1_c0",
+                    "text": "FreshRetailNet-50K: A Stockout-Annotated Censored\nDemand Dataset for Latent Demand Recovery and\nForecasting in Fresh Retail\nYangyang Wang\nDingdong Ltd.\nwangyangyang28@100.me\nJiawei Gu\nDingdong Ltd.\ngujiawei07@100.me\nLi Long\nDingdong Ltd.\nlongli01@100.me\nXin Li\nDingdong Ltd.\nli.xin.cv@gmail.com\nLi Shen\nSun Yat-Sen University\nmathshenli@gmail.com\nZhouyu Fu\nUnaffiliation\nfu.zhouyu@gmail.com\nXiangjun Zhou\nDingdong Ltd.\nzhouxiangjun@100.me\nXu Jiang\nDingdong Ltd.\njiangxu01@100.me\nAbstract\nAccurate demand estimation is critical for the retail business in guiding the inven-\ntory and pricing policies of perishable products. However, it faces fundamental\nchallenges from censored sales data during stockouts, where unobserved demand",
+                    "source": "FreshRetailNet-50K paper.pdf",
+                    "page": 1,
+                    "distance": 0.2925
+                },
+                {
+                    "citation_id": "S5",
+                    "chunk_id": "FreshRetailNet-50K paper.pdf_p3_c2",
+                    "text": "perishable goods, where short shelf lives and frequent restocking requirements heighten stockout\nrisks, leading to unrecorded genuine demand. The absence of stockout annotations forces models to\nprocess censored demand signals as accurate observations, creating systemic underestimation biases.\nThese inaccuracies compound in hierarchical forecasting structures, where store-level stockouts\ndistort aggregated demand patterns across temporal and spatial dimensions, ultimately compromising\nforecast accuracy at higher organizational levels. This limitation triggers a vicious cycle: demand\nunderestimation leads to poor inventory decisions, increasing stockouts and further corrupting demand\nmeasurements\u2014a self-reinforcing deterioration known in supply chain theory as a non-stationary",
+                    "source": "FreshRetailNet-50K paper.pdf",
+                    "page": 3,
+                    "distance": 0.2931
+                },
+                {
+                    "citation_id": "S6",
+                    "chunk_id": "Censored Demand Forecasting paper.pdf_p32_c4",
+                    "text": "14. Besbes, O.; Muharremoglu, A. On Implications of Demand Censoring in the Newsvendor Problem. Manag. Sci. 2013,\n59, 1407\u20131424. [CrossRef]\n15. Jain, A.; Rudi, N.; Wang, T. Demand Estimation and Ordering Under Censoring: Stock-Out Timing Is (Almost) All You Need.\nOper. Res. 2015, 63, 134\u2013150. [CrossRef]\n16. Mersereau, A.J. Demand Estimation from Censored Observations with Inventory Record Inaccuracy. Manuf. Serv. Oper. Manag.\n2015, 17, 335\u2013349. [CrossRef]\n17. Amjad, M.J.; Shah, D. Censored Demand Estimation in Retail. In Proceedings of the ACM on Measurement and Analysis of Computing\nSystems; Association for Computing Machinery: New York, NY, USA, 2017; Volume 1, pp. 1\u201328. [CrossRef]",
+                    "source": "Censored Demand Forecasting paper.pdf",
+                    "page": 32,
+                    "distance": 0.3007
+                },
+                {
+                    "citation_id": "S7",
+                    "chunk_id": "FreshRetailNet-50K paper.pdf_p7_c2",
+                    "text": "demand during stockouts. Our evaluation framework combines:\n\u2022 Controlled MNAR Simulation: Using non-stockout periods as ground truth, we generate\nsynthetic censored regions matching empirical patterns. Model performance is quantified\nthrough Weighted Absolute Percentage Error(WAPE) and Weighted Percentage Error(WPE):\nWAPE =\nP\nt |dt \u2212 yt|P\nt yt\n(magnitude accuracy) (4)\nWPE =\nP\nt(dt \u2212 yt)P\nt yt\n(bias direction) (5)\n\u2022 Demand-Supply Decoupling: A core objective of censored demand recovery is to disentan-\ngle stockout-induced demand suppression from true consumption patterns. We quantify this\ndecoupling through:\n\u03c1DS =\nX\ni\u2208P\nwi \u00b7 P earson(SRi, di), wi = \u00b5iP \u00b5i (6)\nwhere \u03c1DS denotes the Decoupling Score measuring the weighted correlation between",
+                    "source": "FreshRetailNet-50K paper.pdf",
+                    "page": 7,
+                    "distance": 0.3393
+                },
+                {
+                    "citation_id": "S8",
+                    "chunk_id": "Censored Demand Forecasting paper.pdf_p3_c3",
+                    "text": "distinction matters because the strongest pure forecasting model need not be the most\ntransparent or easiest to deploy, while an inventory-oriented pipeline can be operationally\nvaluable even when it does not set a new WAPE record.\n1.1.1. Censored Demand Estimation\nThe censored demand problem arises whenever observed sales yt represent a lower\nbound on true demand dt due to inventory constraints: yt = min(dt, It). The first fam-\nily of solutions treats this as a censoring problem in the econometric sense. Tobin [9]\nintroduced the Tobit model for censored regression, and the associated inverse-Mills-ratio\n(IMR) correction [10] provides a principled adjustment for truncation bias. The operations\nliterature studied this well before the current benchmark wave: Poisson demand from",
+                    "source": "Censored Demand Forecasting paper.pdf",
+                    "page": 3,
+                    "distance": 0.3432
+                }
+            ]
+        }
+    ]
+}
