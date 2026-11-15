@@ -34,11 +34,12 @@ if page=='System evaluation':
     evaluation()
 else:
     st.markdown('<div class="dl-kicker">Workspace / Investigations</div>',unsafe_allow_html=True)
-    st.title('Demand investigation')
-    st.caption('Inspect stock availability, reconstruct censored sales and review the supporting evidence.')
-    scenario=st.selectbox('Investigation preset',list(CASES))
+    st.title('Demand control center')
+    st.caption('Find when sales may have been missed and decide what to investigate next.')
+    scenario=st.selectbox('What do you want to check?',list(CASES))
     q,s,p,include=CASES[scenario]
-    with st.form('run_form',border=True):
+    with st.expander('Investigation settings', expanded=not bool(st.session_state.get('dl_run'))):
+      with st.form('run_form',border=False):
         a,b,c,d=st.columns([1,1,1.3,1.2])
         store=a.number_input('Store ID',min_value=0,value=s,step=1,key=f'store_{scenario}')
         product=b.number_input('Product ID',min_value=0,value=p,step=1,key=f'product_{scenario}')
@@ -73,10 +74,11 @@ else:
     else:
         result=saved['result']; request=saved['request']; qc=result.get('quality_result',{})
         st.divider()
-        st.subheader('Investigation results')
+        st.subheader('Your investigation')
         snapshot=' · '.join([saved['mode'], f"Store {request['store_id']} / Product {request['product_id']} / {request['date']}" if 'store_id' in request else 'No retail identifiers',f"k={request['top_k']}"])
         st.caption('Last completed run · '+snapshot)
-        st.write(request['question'])
+        with st.expander('Original request and run details'):
+            st.write(request['question'])
         label='Approved' if qc.get('approved') is True else 'Clarification required' if 'clarification' in result.get('execution_trace',[]) else 'Not approved'
         st.caption(f"{label}  /  {saved['latency']:.2f}s  /  {result.get('total_tokens',0):,} reported tokens")
         tabs=st.tabs(['Overview','Scientific evidence','Agent execution','Quality review'])

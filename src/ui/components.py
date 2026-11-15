@@ -74,75 +74,107 @@ def evidence(result):
 
 
 def overview(result):
-    if 'clarification' in result.get('execution_trace',[]):
-        st.info(result.get('final_answer','Please clarify the request.'))
+    if 'clarification' in result.get('execution_trace', []):
+        st.info(result.get('final_answer', 'Please provide the missing details.'))
         return
-    if result.get('quality_result',{}).get('approved') is not True:
-        st.warning('Analysis withheld pending a successful quality review.')
-        for issue in result.get('quality_result',{}).get('issues',[]):
-            st.write(issue)
+    if result.get('quality_result', {}).get('approved') is not True:
+        st.warning('We could not verify this investigation. No conclusions have been released.')
+        st.caption('Open Quality review for the reason, then try again.')
         return
-    data = result.get('data_result',{}).get('data',{})
-    demand = result.get('demand_result',{}).get('data',{})
+    data = result.get('data_result', {}).get('data', {})
+    demand = result.get('demand_result', {}).get('data', {})
     if data.get('status') != 'success':
-        st.markdown(result.get('final_answer',''))
+        st.markdown(result.get('final_answer', 'No matching retail record.'))
         return
+    hours = sorted(data.get('stockout_hours', []))
     recorded = data.get('recorded_sales')
-    lost = demand.get('estimated_lost_demand')
-    total = demand.get('estimated_total_demand')
-    for col,label,value,caption in zip(st.columns(4),['Recorded sales','Est. lost demand','Adjusted demand','Stockout hours'],[number(recorded),number(lost),number(total),str(data.get('total_stockout_hours','—'))],['Observed · normalized','Daytime estimate','Observed + estimated loss','Across 24 hours']):
-        with col:
-            with st.container(border=True):
-                st.metric(label,value)
-                st.caption(caption)
-    if demand.get('status') == 'insufficient_evidence':
-        st.warning('No estimate: insufficient comparable observations. Unsupported hours: '+', '.join(map(str,demand.get('unsupported_hours',[]))))
-    elif not demand and result.get('route') in ('estimate','hybrid') and data.get('daytime_stockout_hours')==0:
-        st.info('No daytime stockout detected; estimation not required within the modeled window.')
-    hours = data.get('stockout_hours',[])
-    main,side = st.columns([2,1],gap='medium')
-    with main:
+    valid = demand.get('status') == 'success'
+    lost = demand.get('estimated_lost_demand') if valid else None
+    total = demand.get('estimated_total_demand') if valid else None
+    share = lost / total if valid and total and total > 0 and lost is not None else None
+    estimates = demand.get('hourly_estimates', []) if valid else []
+    peaks = [e['hour'] for e in estimates if e['estimated_lost_demand'] > 0 and e['estimated_lost_demand'] == max(x['estimated_lost_demand'] for x in estimates)]
+    def clock(h):
+        return f'{h:02d}:00' if h < 24 else '24:00'
+    groups = []
+    for h in hours:
+        if groups and groups[-1][-1] + 1 == h:
+            groups[-1].append(h)
+        else:
+            groups.append([h])
+    windows = ', '.join(f'{clock(g[0])}–{clock(g[-1]+1)}' for g in groups)
+    left, right = st.columns([2, 1], gap='medium')
+    with left:
         with st.container(border=True):
-            st.markdown('**Stock availability**')
-            st.caption('24-hour observation window')
-            fig = go.Figure(go.Bar(x=list(range(24)),y=[1]*24,marker_color=[AMBER if h in hours else GREEN for h in range(24)], customdata=['Stockout' if h in hours else 'Available' for h in range(24)],hovertemplate='%{x}:00 · %{customdata}<extra></extra>'))
-            fig.update_yaxes(visible=False)
-            fig.update_xaxes(tickmode='array',tickvals=[0,4,8,12,16,20,23],ticktext=['00:00','04:00','08:00','12:00','16:00','20:00','23:00'],showgrid=False)
-            fig.update_layout(bargap=.12)
-            chart(fig,145)
-            st.caption('Green · available     /     Amber · stockout')
-            estimates = demand.get('hourly_estimates',[]) if demand.get('status')=='success' else []
-            if estimates:
-                st.divider()
-                st.markdown('**Hourly demand reconstruction**')
-                frame=pd.DataFrame(estimates)
-                x=[f'{h:02d}:00' for h in frame.hour]
-                fig=go.Figure([go.Bar(x=x,y=frame.actual_sales,name='Observed',marker_color=GRAY),go.Bar(x=x,y=frame.expected_sales,name='Expected',marker_color=GREEN)])
-                fig.update_layout(barmode='group')
-                fig.update_yaxes(title='Normalized sales',gridcolor='#edf0ee',rangemode='tozero')
-                chart(fig,260)
-                with st.expander('Hourly evidence table'):
-                    st.dataframe(frame,hide_index=True,use_container_width=True)
-    with side:
-        with st.container(border=True):
-            st.markdown('**Demand composition**')
-            if isinstance(total,(int,float)) and total>0 and isinstance(lost,(int,float)) and isinstance(recorded,(int,float)):
-                fig=go.Figure(go.Pie(labels=['Recorded','Estimated loss'],values=[recorded,lost],hole=.72,marker_colors=[GREEN,AMBER],textinfo='none',sort=False))
-                fig.update_layout(annotations=[dict(text=f'{lost/total:.1%}',x=.5,y=.5,showarrow=False,font=dict(size=23,color='#182622'))],showlegend=False)
-                chart(fig,180)
-                st.caption('Estimated loss / adjusted demand')
+            st.caption('01 / WHAT HAPPENED')
+            if hours:
+                st.markdown(f'## Out of stock for {len(hours)} hours')
+                st.write(windows)
             else:
-                st.caption('No approved numerical estimate for this run.')
-            st.divider()
-            st.markdown('**Estimation scope**')
-            st.write('06:00–22:00 (end exclusive)')
-            st.caption('Potential losses outside this window are excluded. Values are normalized, not currency or item counts.')
-    st.subheader('Analytical findings')
-    for key in ('data_result','demand_result','knowledge_result'):
-        item=result.get(key,{})
-        if item:
-            with st.expander(NAMES.get(item.get('agent'),key),expanded=key=='demand_result'):
-                st.markdown(item.get('analysis',''))
+                st.markdown('## No stockout recorded')
+                st.caption('All 24 hourly flags indicate availability.')
+            fig = go.Figure(go.Bar(x=list(range(24)), y=[1]*24, marker_color=[AMBER if h in hours else GREEN for h in range(24)], customdata=['Out of stock' if h in hours else 'Available' for h in range(24)], hovertemplate='%{x}:00 – %{customdata}<extra></extra>'))
+            fig.update_yaxes(visible=False, range=[0,1])
+            fig.update_xaxes(tickmode='array',tickvals=[0,6,12,18,23],ticktext=['00:00','06:00','12:00','18:00','23:00'],showgrid=False)
+            fig.update_layout(bargap=.08)
+            chart(fig,105)
+            st.caption('Green = available   ·   Amber = out of stock')
+    with right:
+        with st.container(border=True):
+            st.caption('02 / ESTIMATED IMPACT')
+            if share is not None:
+                st.markdown(f'## {share:.1%} demand gap')
+                st.write('Estimated share of adjusted daily demand not captured in sales.')
+                st.caption('Daytime losses only · not measured lost sales')
+            elif demand.get('status') == 'insufficient_evidence':
+                st.markdown('## Estimate unavailable')
+                st.write('Not enough comparable historical sales to quantify the gap.')
+            else:
+                st.markdown('## Not estimated')
+                st.write('This investigation has no approved demand estimate.')
+    if valid:
+        with st.container(border=True):
+            st.caption('03 / SALES WE SAW VS. SALES WE MAY HAVE MISSED')
+            a,b,c=st.columns(3)
+            a.metric('Recorded sales',number(recorded)); b.metric('Estimated missed sales',number(lost)); c.metric('Adjusted demand',number(total))
+            if total and total > 0 and lost is not None and recorded is not None:
+                fig=go.Figure([go.Bar(y=['Adjusted demand'],x=[recorded],orientation='h',name='Recorded',marker_color=GREEN,text=[f'{recorded/total:.1%} recorded'],textposition='inside'),go.Bar(y=['Adjusted demand'],x=[lost],orientation='h',name='Estimated gap',marker_color=AMBER,text=[f'{lost/total:.1%} estimated gap'],textposition='inside')]); fig.update_layout(barmode='stack',showlegend=False); fig.update_yaxes(visible=False); fig.update_xaxes(visible=False); chart(fig,75)
+            st.caption('Values use a normalized sales scale; these are not item counts or money.')
+    a,b=st.columns([2,1],gap='medium')
+    with a:
+        with st.container(border=True):
+            st.caption('04 / WHERE TO LOOK FIRST')
+            if estimates:
+                st.markdown('### '+ ('Highest estimated gap: '+', '.join(clock(h) for h in peaks) if peaks else 'No positive estimated gap'))
+                frame=pd.DataFrame(estimates)
+                labels=[clock(h) for h in frame.hour]
+                fig=go.Figure(go.Bar(x=frame.estimated_lost_demand,y=labels,orientation='h',marker_color=[AMBER if h in peaks else '#C5D1CB' for h in frame.hour],text=[f'{v:.4f}' for v in frame.estimated_lost_demand],textposition='outside',cliponaxis=False)); fig.update_yaxes(autorange='reversed'); fig.update_xaxes(rangemode='tozero',title='Estimated missed sales (normalized)',gridcolor='#edf0ee'); chart(fig,220)
+                st.caption('Bars show estimated missed sales, not observed customer behavior.')
+                with st.expander('See hourly calculations'):
+                    st.dataframe(frame,hide_index=True,use_container_width=True)
+            else:
+                st.write('No hourly estimate available for this run.')
+                if demand.get('unsupported_hours'):
+                    st.caption('Hours lacking comparable data: '+', '.join(clock(h) for h in demand['unsupported_hours']))
+    with b:
+        with st.container(border=True):
+            st.caption('05 / SUGGESTED NEXT STEP')
+            if peaks:
+                st.markdown('### Review replenishment')
+                st.write('Check stock and replenishment records before '+', '.join(clock(h) for h in peaks)+'.')
+            elif hours:
+                st.markdown('### Check the stockout records')
+                st.write('Review inventory availability during '+windows+'.')
+            else:
+                st.markdown('### Continue monitoring')
+                st.write('No stockout was detected for the selected day.')
+            st.caption('Suggested investigation, not an automated ordering recommendation.')
+            if valid:
+                counts=[e['comparable_observations'] for e in estimates]
+                if counts: st.caption(f'Historical support: {min(counts)}–{max(counts)} observations per hour.')
+                st.caption('Estimated window: 06:00–22:00. Later losses are excluded.')
+    with st.expander('Read the full investigation and methodology'):
+        st.markdown(result.get('final_answer',''))
     st.download_button('Download investigation report',result.get('final_answer',''),'demandlens-report.md',mime='text/markdown')
 
 
