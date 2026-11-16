@@ -4,6 +4,7 @@
 
 # Local datasets
 data/raw/*
+!data/raw/retail_sample.parquet
 data/processed/*
 
 # Vector database
@@ -16,3 +17,5 @@ chroma_db/
 __pycache__/
 .pytest_cache/
 data/documents/*.pdf
+
+.streamlit/secrets.toml
