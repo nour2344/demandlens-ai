@@ -3,7 +3,8 @@ import chromadb
 
 from src.rag.ingestion import (
     CHROMA_PATH,
-    COLLECTION_NAME
+    COLLECTION_NAME,
+    ingest_documents
 )
 
 
@@ -20,9 +21,22 @@ def retrieve_documents(query, top_k=3):
         path=str(CHROMA_PATH)
     )
 
-    collection = client.get_collection(
-        name=COLLECTION_NAME
+    collection = client.get_or_create_collection(
+        name=COLLECTION_NAME,
+        configuration={"hnsw": {"space": "cosine"}}
     )
+
+    # Automatically initialize the knowledge base
+    # if no scientific passages are available.
+    if collection.count() == 0:
+
+        print("Initializing scientific knowledge base...")
+
+        ingest_documents()
+
+        collection = client.get_collection(
+            name=COLLECTION_NAME
+        )
 
     if collection.count() == 0:
         return []
