@@ -1,12 +1,13 @@
-# Data Sources
+## Scientific Knowledge Base
 
-## FreshRetailNet-50K
+### Censored Demand Forecasting
 
-- Provider: Dingdong-Inc
+- Title: A Reproducible, Leakage-Free Pipeline for
+  Censored Demand Forecasting and Inventory
+  Optimization on FreshRetailNet-50K
+- Publisher: MDPI, Inventions
 - License: CC BY 4.0
-- Dataset: https://huggingface.co/datasets/Dingdong-Inc/FreshRetailNet-50K
-- Research paper: https://arxiv.org/abs/2505.16319
+- DOI: https://doi.org/10.3390/inventions11050089
 
-DemandLens AI uses a subset of 10,000 observations
-from the original training dataset for research
-and demonstration purposes.
+The original PDF is included for scientific retrieval
+and research demonstration purposes.

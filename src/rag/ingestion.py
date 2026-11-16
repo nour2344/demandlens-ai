@@ -1,6 +1,6 @@
 
 from pathlib import Path
-
+from src.rag.download_documents import download_documents
 import chromadb
 from pypdf import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -73,6 +73,7 @@ def create_chunks(documents):
 
 def ingest_documents():
     """Build the persistent vector database."""
+    download_documents()
 
     documents = load_documents()
 

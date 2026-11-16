@@ -17,5 +17,6 @@ chroma_db/
 __pycache__/
 .pytest_cache/
 data/documents/*.pdf
+!data/documents/Censored Demand Forecasting paper.pdf
 
 .streamlit/secrets.toml
